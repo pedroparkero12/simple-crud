@@ -94,13 +94,14 @@
                 });
             },
             clearFields(){
-                this.id = '';
+                this.id = null;
                 this.firstname = '';
                 this.lastname = '';
                 this.username = '';
                 this.hasError = false;
             },
             showUserModal(modalType,data){
+                this.clearFields();
                 if(modalType=='Edit'){
                     this.firstname = data.firstname;
                     this.lastname = data.lastname;

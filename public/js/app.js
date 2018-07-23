@@ -47552,13 +47552,14 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             });
         },
         clearFields: function clearFields() {
-            this.id = '';
+            this.id = null;
             this.firstname = '';
             this.lastname = '';
             this.username = '';
             this.hasError = false;
         },
         showUserModal: function showUserModal(modalType, data) {
+            this.clearFields();
             if (modalType == 'Edit') {
                 this.firstname = data.firstname;
                 this.lastname = data.lastname;
