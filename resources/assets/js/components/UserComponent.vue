@@ -13,45 +13,51 @@
                         </tr>
                     </thead>
                     <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>pedro</td>
-                        <td>Pedro</td>
-                        <td>Parkero</td>
-                        <td>Edit / Delete</td>
+                    <tr v-for="user in users">
+                        <td>{{user.id}}</td>
+                        <td>{{user.username}}</td>
+                        <td>{{user.firstname}}</td>
+                        <td>{{user.lastname}}</td>
+                        <td><a href="#" @click="showUserModal('Edit',user)">Edit</a> / <a href="#" @click="confirmDelete(user)">Delete</a></td>
                     </tr>
                     </tbody>
                 </table>
-                <button class="btn btn-default">Add New User</button>
+                <button class="btn btn-default"  @click="showUserModal('Add')">Add New User</button>
             </div>
         </div>
-        <div class="modal fade" id="write_comment" tabindex="-1" role="dialog">
+        <div class="modal fade" id="user_modal" tabindex="-1" role="dialog">
             <div class="modal-dialog modal-sm">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h4 class="modal-title">
-                            Write a comment
-                        </h4>
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" id="name" v-model="name" class="form-control">
+                <form id="userForm" class="needs-validation" novalidate @submit="checkForm" v-bind:class="{'was-validated': hasError}">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">
+                                {{modalType}} User
+                            </h4>
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                         </div>
-                        <div class="form-group">
-                            <label>Comment</label>
-                            <input type="text" id="content" v-model="content" class="form-control">
+
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>First name</label>
+                                <input type="text" id="name" v-model="firstname" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Last name</label>
+                                <input type="text" id="name" v-model="lastname" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="name" v-model="username" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <input type="submit" class="btn btn-primary" :value="modalType">
                         </div>
                     </div>
-
-                    <!-- Modal Actions -->
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary" @click="addComment">Reply</button>
-                    </div>
-                </div>
+                </form>
             </div>
         </div>
     </div>
@@ -62,12 +68,13 @@
     export default {
         data() {
 			return {
-                root_comments: [],
-                comments: [],
-                parent_id:null,
-                name:'',
-                content:'',
-                errors:[]
+                users: [],
+                firstname:'',
+                lastname:'',
+                username:'',
+                errors:[],
+                modalType:'Add',
+                hasError:false,
             }
         },
         ready(){
@@ -78,56 +85,130 @@
         },
         methods: {
             prepareComponent() {
-               
+               this.getUsers();
             },
-            getComments(){
-                // axios.get(`/comments`+`?no_parent=""`)
-                // .then((response) => {
-                //     this.root_comments = response.data;
-                // });
-                // axios.get(`/comments`)
-                // .then((response) => {
-                //     this.comments = response.data;
-                // });
+            getUsers(){
+                axios.get(`api/users`)
+                .then((response) => {
+                    this.users = response.data;
+                });
             },
             clearFields(){
-                this.name = '';
-                this.content = '';
+                this.id = '';
+                this.firstname = '';
+                this.lastname = '';
+                this.username = '';
+                this.hasError = false;
             },
-            showCommentModal(parent_id){
-                if(parent_id==undefined) this.parent_id=null;
-                else this.parent_id = parent_id
-                $('#write_comment').modal('show');
+            showUserModal(modalType,data){
+                if(modalType=='Edit'){
+                    this.firstname = data.firstname;
+                    this.lastname = data.lastname;
+                    this.username = data.username;
+                    this.id = data.id;
+                }
+
+                this.modalType = modalType;
+                $('#user_modal').modal('show');
+               
             },
-            checkForm(){
-                if (this.name && this.content) {
-                    return true;
+            checkForm(e){
+                e.preventDefault();
+                
+                if (this.firstname && this.lastname && this.username) {
+                   this.addUser();
                 }
                 
                 this.errors = [];
                 
-                if (!this.name) {
-                    this.errors.push('Name is required.');
+                if (!this.firstname) {
+                    this.errors.push('First name is required.');
                 }
-                if (!this.content) {
-                    this.errors.push('Comment is required.');
+                if (!this.lastname) {
+                    this.errors.push('Last name is required.');
                 }
-                
-            },
-            addComment(){
-                if(this.checkForm()){
-                    var data = {'post_id':1,'name':this.name,'content':this.content,'parent_id':this.parent_id};
+                if (!this.username) {
+                    this.errors.push('Username is required.');
+                }
+                if(this.errors.length!=0){
+                   this.hasError=true;
+                   this.$swal("Error!", this.getErrors(this.errors), "error");
+                    return false;
+                }
 
-                    axios.post(`/comments`,data)
+            },
+            addUser(){
+                let data = {'firstname':this.firstname,'lastname':this.lastname,'username':this.username};
+                //add user
+                if(this.modalType=='Add'){
+                    axios.post(`/api/users`,data)
                     .then((response) => { 
-                        $('#write_comment').modal('hide');
-                        this.clearFields();
-                        this.getComments();
-                    })
+                        console.log(response.data);
+                        if(response.data.errors!=undefined){
+                            this.$swal("Error!", this.getBackError(response.data.errors), "error");
+                        }
+                        else{
+                            $('#user_modal').modal('hide');
+                            this.clearFields();
+                            this.getUsers();
+                        }
+                    
+                    })   
                 }
-                else{
-                    alert(this.errors);
+                //edit user
+                if(this.modalType=='Edit'){
+                    axios.put(`/api/users/${this.id}`,data)
+                    .then((response) => { 
+                        console.log(response.data);
+                        if(response.data.errors!=undefined){
+                            this.$swal("Error!", this.getBackError(response.data.errors), "error");
+                        }
+                        else{
+                            $('#user_modal').modal('hide');
+                            this.clearFields();
+                            this.getUsers();
+                        }
+                    
+                    })   
                 }
+             
+            },
+            getErrors(errors){
+                let list='';
+                for(let x = 0; x<errors.length; x++){
+                    if(x==errors.length-1) list+=errors[x];
+                    else list+=errors[x]+', ';
+                }
+                return list;
+            },
+            getBackError(data){
+                let list='';
+                let x=0;
+                for (let key in data) {
+                   list+=data[key][0]+' ';
+                }
+                return list;
+
+            },
+            //delete users
+            confirmDelete(data){
+                this.$swal({
+                    title: 'Delete username '+ data.username +'?',
+                    text: 'You can\'t revert your action',
+                    icon: "warning",
+                    closeOnClickOutside: false,
+                    dangerMode: true,
+                    buttons: ["No!", "Yes, delete it!"],
+                }).then((confirm)=>{
+                    if(confirm){
+                        axios.delete(`/api/users/${data.id}`,{})
+                        .then((response) => { 
+                            this.$swal('Deleted', 'You successfully deleted username '+data.username+'.', 'success');
+                            this.getUsers();
+                        })   
+                    }
+                });
+
             }
             
 		}
